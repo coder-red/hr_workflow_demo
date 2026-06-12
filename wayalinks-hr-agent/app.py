@@ -7,7 +7,7 @@ import streamlit as st
 from agents.jd_generator import generate_jd
 from agents.screener import score_candidates
 from agents.ranker import rank_candidates
-from agents.notifier import invite_shortlisted, notify_hr, send_acceptance
+from agents.notifier import notify_hr
 from data.candidates import MOCK_CANDIDATES
 
 DEFAULT_STATE = {
@@ -17,9 +17,9 @@ DEFAULT_STATE = {
     "scores": [],
     "shortlisted": [],
     "top_candidate": {},
-    "shortlist_sent": False,
+    "shortlist_invited": False,
+    "offer_sent": False,
     "hr_notified": False,
-    "acceptance_sent": False,
     "hr_email": "",
 }
 
@@ -29,11 +29,11 @@ for key, val in DEFAULT_STATE.items():
 
 PIPELINE_STAGES = [
     "Generate JD",
-    "Score Candidates",
-    "Shortlist Top 3",
+    "Score & Rank",
+    "Invite",
+    "Offer",
     "Notify HR",
-    "HR Review",
-    "Offer Sent",
+    "Done",
 ]
 
 st.set_page_config(page_title="HR Recruitment Demo", layout="wide")
@@ -68,7 +68,7 @@ for i, label in enumerate(PIPELINE_STAGES):
 st.divider()
 
 
-# STAGE 0
+# STAGE 0 — Generate JD
 if st.session_state.stage == 0:
     st.subheader("Describe the role you're hiring for")
     job_brief = st.text_area(
@@ -89,7 +89,7 @@ if st.session_state.stage == 0:
         st.rerun()
 
 
-# STAGE 1
+# STAGE 1 — Score & Rank
 if st.session_state.stage == 1:
     st.subheader("Generated Job Description")
     with st.expander("View full JD", expanded=True):
@@ -114,7 +114,7 @@ if st.session_state.stage == 1:
         st.rerun()
 
 
-# STAGE 2
+# STAGE 2 — Invite Shortlisted (simulated)
 if st.session_state.stage == 2:
     st.subheader("Candidate Rankings")
 
@@ -134,74 +134,99 @@ if st.session_state.stage == 2:
         st.dataframe(rows, use_container_width=True, hide_index=True)
         st.caption("⭐ = Shortlisted (top 3)")
 
-    if st.button("Shortlist Top 3 & Notify HR", type="primary"):
-        with st.spinner("Sending shortlist and HR report emails..."):
+    st.subheader("Invite Shortlisted Candidates?")
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("✓ Yes, send invitations", type="primary"):
+            st.session_state.shortlist_invited = True
+            st.session_state.stage = 3
+            st.rerun()
+    with col2:
+        if st.button("✗ Skip"):
+            st.session_state.shortlist_invited = False
+            st.session_state.stage = 3
+            st.rerun()
+
+
+# STAGE 3 — Send Offer (simulated)
+if st.session_state.stage == 3:
+    if st.session_state.shortlist_invited:
+        st.success("✉️ Invitation emails sent to shortlisted candidates (simulated)")
+    else:
+        st.info("⏭️ Shortlist invitations skipped")
+
+    tc = st.session_state.top_candidate
+    if tc:
+        st.subheader(f"Top Candidate: **{tc.get('name', '-')}**")
+        st.write(f"Score: **{tc.get('score', 0)}/100**")
+        st.write(tc.get("reasoning", ""))
+
+    st.subheader("Send Offer Letter?")
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("✓ Yes, send offer", type="primary"):
+            st.session_state.offer_sent = True
+            st.session_state.stage = 4
+            st.rerun()
+    with col2:
+        if st.button("✗ Skip"):
+            st.session_state.offer_sent = False
+            st.session_state.stage = 4
+            st.rerun()
+
+
+# STAGE 4 — Notify HR (actual email)
+if st.session_state.stage == 4:
+    if st.session_state.offer_sent:
+        st.success(f"✉️ Offer sent to **{st.session_state.top_candidate.get('name', '')}** (simulated)")
+    else:
+        st.info("⏭️ Offer skipped")
+
+    st.subheader("Notify HR with Full Report")
+    st.write("Send the ranking report to your email.")
+
+    if st.button("Send Report to My Email", type="primary"):
+        if not st.session_state.hr_email:
+            st.warning("Enter your email in the sidebar first.")
+            st.stop()
+        with st.spinner("Sending ranking report..."):
             state = {
                 "job_description": st.session_state.job_description,
-                "shortlisted": st.session_state.shortlisted,
                 "scores": st.session_state.scores,
                 "hr_email": st.session_state.hr_email,
             }
-            state.update(invite_shortlisted(state))
             state.update(notify_hr(state))
-            st.session_state.shortlist_sent = state["shortlist_sent"]
             st.session_state.hr_notified = state["hr_notified"]
-            st.session_state.stage = 3
+            st.session_state.hr_notified_simulated = state.get("hr_notified_simulated", False)
+            st.session_state.hr_error_reason = state.get("error_reason", "")
+            st.session_state.stage = 5
         st.rerun()
 
 
-# STAGE 3
-if st.session_state.stage == 3:
-    tc = st.session_state.top_candidate
-    if tc:
-        st.subheader("Top Candidate — Ready for Approval")
-        col1, col2 = st.columns([1, 2])
-        with col1:
-            st.metric("Name", tc.get("name", "-"))
-            st.metric("Score", f"{tc.get('score', 0)}/100")
-        with col2:
-            st.write("**Reasoning**")
-            st.write(tc.get("reasoning", ""))
-
-    st.info("✅ Shortlist emails sent to top 3 candidates")
-    st.info("✅ Ranked report emailed to HR")
-
-    st.subheader("HR Action Required")
-    st.write("Review the results above. Approve to send the formal offer letter.")
-    if st.button("Approve & Send Offer", type="primary"):
-        with st.spinner("Sending acceptance email..."):
-            state = {
-                "job_description": st.session_state.job_description,
-                "top_candidate": st.session_state.top_candidate,
-            }
-            state.update(send_acceptance(state))
-            st.session_state.acceptance_sent = state["acceptance_sent"]
-            st.session_state.stage = 4
-        st.rerun()
-
-
-# STAGE 4
-if st.session_state.stage == 4:
+# STAGE 5 — Done
+if st.session_state.stage == 5:
     st.success("## Pipeline Complete")
-    tc = st.session_state.top_candidate
-    st.markdown(
-        f"### ✅ Offer sent to **{tc.get('name', 'the selected candidate')}**"
-    )
 
-    st.divider()
-    st.subheader("Pipeline Summary")
-    st.markdown(
-        f"""
-- **5 real emails fired** via Resend
-  - 3 shortlist notifications to top candidates
-  - 1 ranked report to HR
-  - 1 formal acceptance to the winner
-- **1 HR decision** — the Approve button
-- **0 manual steps** besides that
+    if st.session_state.get("hr_notified_simulated"):
+        err = st.session_state.get("hr_error_reason", "")
+        st.warning(f"⚠️ Report email **failed**")
+        st.code(err, language="text")
+    else:
+        st.info(f"✅ Ranked report sent to **{st.session_state.hr_email}**")
 
-**Job:** {st.session_state.job_description.split(chr(10))[0]}
-        """
-    )
+    st.subheader("Summary")
+    parts = [f"- **{len(st.session_state.scores)}** candidates scored and ranked"]
+    if st.session_state.shortlist_invited:
+        parts.append("- ✉️ Shortlist invitations sent (simulated)")
+    else:
+        parts.append("- ⏭️ Shortlist invitations skipped")
+    if st.session_state.offer_sent:
+        parts.append(f"- ✉️ Offer sent to **{st.session_state.top_candidate.get('name', '')}** (simulated)")
+    else:
+        parts.append("- ⏭️ Offer skipped")
+    parts.append(f"- 📧 Report emailed to HR\n**Job:** {st.session_state.job_description.split(chr(10))[0]}")
+
+    st.markdown("\n".join(parts))
 
     if st.button("Start Over"):
         for key in DEFAULT_STATE:

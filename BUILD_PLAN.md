@@ -10,7 +10,7 @@
 ## Step 1 — Project Scaffold
 - Create directory structure:
   ```
-  wayalinks-hr-agent/
+  hr-agent/
   ├── agents/
   │   ├── __init__.py
   │   ├── jd_generator.py

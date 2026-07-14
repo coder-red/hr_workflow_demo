@@ -37,7 +37,7 @@ PIPELINE_STAGES = [
 ]
 
 st.set_page_config(page_title="HR Recruitment Demo", layout="wide")
-st.title("Wayalinks — HR Recruitment Automation Demo")
+st.title("HR Recruitment Automation Demo")
 
 with st.sidebar:
     st.subheader("HR Email for Notifications")

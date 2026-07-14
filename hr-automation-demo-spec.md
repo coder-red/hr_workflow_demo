@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A LangGraph-powered HR recruitment pipeline demo for Wayalinks. HR enters a job brief, the system generates a full JD, scores 5 pre-loaded candidates against it, automatically emails the top 3 a shortlist notification, emails a ranked report to HR, and after HR approves, fires a formal acceptance email to the winner. Every email is real and sends via Resend.
+A LangGraph-powered HR recruitment pipeline demo. HR enters a job brief, the system generates a full JD, scores 5 pre-loaded candidates against it, automatically emails the top 3 a shortlist notification, emails a ranked report to HR, and after HR approves, fires a formal acceptance email to the winner. Every email is real and sends via Resend.
 
 HR touches the app exactly once — the approve button. Everything else runs automatically.
 
@@ -46,7 +46,7 @@ No database. No FastAPI. No Redis.
 ## Project Structure
 
 ```
-wayalinks-hr-agent/
+hr-agent/
 ├── agents/
 │   ├── jd_generator.py
 │   ├── screener.py
@@ -84,7 +84,7 @@ MOCK_CANDIDATES = [
         "experience_years": 5,
         "answers": {
             "relevant_experience": "5 years in frontend engineering, led a team of 3 at a Lagos fintech building React dashboards.",
-            "why_role": "Excited by the fintech infrastructure problem space. Waya's payment layer is exactly where I want to build.",
+            "why_role": "Excited by the fintech infrastructure problem space. The payment layer is exactly where I want to build.",
             "availability": "2 weeks notice",
             "salary_expectation": "500k/month"
         }
@@ -117,7 +117,7 @@ MOCK_CANDIDATES = [
         "experience_years": 4,
         "answers": {
             "relevant_experience": "4 years backend Python, built 2 internal automation tools. No payments experience but strong on APIs.",
-            "why_role": "Interested in the problem, been following Waya for a while.",
+            "why_role": "Interested in the problem, been following the space for a while.",
             "availability": "3 weeks notice",
             "salary_expectation": "450k/month"
         }
